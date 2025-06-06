@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[13]:
-
-
 import gurobipy as gp
 from gurobipy import GRB
 import sys
@@ -14,12 +11,6 @@ import random
 import pandas as pd
 import ast
 
-
-
-
-# In[14]:
-
-
 def read_prob(filepath):
     with open(filepath, 'r') as f:
         lines = f.readlines()
@@ -29,7 +20,6 @@ def read_prob(filepath):
     edge_weights = None
     start_reading_edges = False
     
-   
     for line in lines:
         line = line.strip()
         
@@ -59,27 +49,16 @@ def read_prob(filepath):
     
     return num_nodes, num_path, edge_weights
 
-
-# In[20]:
-
-
 def calculate_expected_costs_from_datasets(n, scenarios, num_nodes, num_paths):
     global random_scenarios_dataset
 
-
     scenario_data = np.zeros((scenarios, num_nodes, num_nodes, num_paths))
-    
     with open("train_set_scenarios.txt", "r") as f:
         valid_range = [int(line.strip()) for line in f]
- 
-
     random_indices = random.sample(valid_range, scenarios)
    
-    
     new_entry = {'#': scenarios, 'Scenarios': random_indices}
     random_scenarios_dataset = pd.concat([random_scenarios_dataset, pd.DataFrame([new_entry])], ignore_index=True)
-
-
 
     for idx, s in enumerate(random_indices):
         scenario = filepath + f"Scenario{s}.dat" 
@@ -109,17 +88,10 @@ def calculate_expected_costs_from_datasets(n, scenarios, num_nodes, num_paths):
 
     return expected_costs
 
-
-# In[16]:
-
-
 def generate_random_solution(num_nodes):
     number = list(range(2, num_nodes + 1))
-    random.shuffle(number)
-    
+    random.shuffle(number)  
     number = [1] + number
-    
-    
     random_solution = np.zeros((num_nodes, num_nodes), dtype=int)
 
     for i in range(num_nodes - 1):
@@ -127,21 +99,13 @@ def generate_random_solution(num_nodes):
     random_solution[number[-1]-1][number[0]-1] = 1
 
     return random_solution, number
-
-
-# In[17]:
-
-
+    
 scenarios = [100]
 num_experiments = 30
 nr_random_sol = 100000
 filepath = f'data_prob/'
 prob_path = 'prob.txt'
 num_nodes, num_path, edge_weights = read_prob(filepath + prob_path)
-
-
-# In[18]:
-
 
 def calculate_expected_cost(random_solution, expected_costs):
     expected_cost = 0  
@@ -152,10 +116,6 @@ def calculate_expected_cost(random_solution, expected_costs):
                 expected_cost += expected_costs[i, j] 
 
     return expected_cost
-
-
-# In[21]:
-
 
 for s in scenarios:  
     random_scenarios_dataset = pd.DataFrame(columns=['#', 'Scenarios'])
