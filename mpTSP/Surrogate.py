@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
-
 # # Surrogate model
-
-# In[15]:
-
 
 import gurobipy as gp
 import numpy as np
@@ -46,16 +42,8 @@ import time
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import regularizers
 
-
-# In[2]:
-
-
 scenarios = [100]
 num_experiments = 30
-
-
-# In[3]:
-
 
 def read_prob(filepath):
     with open(filepath, 'r') as f:
@@ -65,8 +53,7 @@ def read_prob(filepath):
     num_path = None
     edge_weights = None
     node_coordinates = {}
-    start_reading_edges = False
-    
+    start_reading_edges = False  
    
     for line in lines:
         line = line.strip()
@@ -97,10 +84,6 @@ def read_prob(filepath):
     
     return num_nodes, num_path, edge_weights
 
-
-# In[4]:
-
-
 def read_dataset_from_file(file_path):
     dataset = []
     with open(file_path, 'r') as file:
@@ -110,7 +93,6 @@ def read_dataset_from_file(file_path):
             cost = float(cost_part.strip())
             dataset.append((sequence, cost))
     return dataset
-
 
 def transform_to_binary_oriented(dataset):
     num_nodes = max(max(row[0]) for row in dataset)
@@ -132,10 +114,6 @@ def transform_to_binary_oriented(dataset):
     
     return np.array(X), np.array(y)
 
-
-# In[16]:
-
-
 for s in scenarios:    
     output_file = f'Results/output_surrogate_105x{s}.txt'
     
@@ -147,12 +125,7 @@ for s in scenarios:
     
             dataset = read_dataset_from_file(file_path)
             X, Y = transform_to_binary_oriented(dataset)
-    
 
-
-
-
-    
             def create_dense_model(input_dim):
                 model = Sequential([
                     Dense(16, activation='relu', input_dim=input_dim),
@@ -161,10 +134,6 @@ for s in scenarios:
                     Dense(1)
                 ])
                 return model
-
-       
-
-        
 
             Y = Y.reshape(-1, 1)   
     
@@ -183,10 +152,7 @@ for s in scenarios:
             reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-6, verbose=0)
     
             num_epochs = 1000
-    
             start_time = time.perf_counter()
-
-
             batch_size = 256
     
             NN_model.fit(X_train, Y_train, 
@@ -196,12 +162,10 @@ for s in scenarios:
                          callbacks=[early_stopping, reduce_lr],
                          verbose=1)
     
-    
             training_time = time.perf_counter() - start_time
     
             y_pred = NN_model.predict(X_test)
             y_pred_train = NN_model.predict(X_train)
-
 
             r2_score_train = metrics.r2_score(Y_train, y_pred_train)
             r2_score = metrics.r2_score(Y_test, y_pred)
@@ -219,9 +183,6 @@ for s in scenarios:
                     #print(f"Tempo di allenamento: {training_time:.2f} secondi")
             #NN_model.save(f"NN Models 105 nodes/NN_model_105x{s}_{n}.keras")
 
-
-
-
             with open(output_file, 'a') as f:
                     f.write("Key, Route, ObjVal, Eval_cost, Time_Sec, CPU_Time_Sec\n")
 
@@ -232,14 +193,7 @@ for s in scenarios:
 
             print(s, n, route, res, total_cost, resolution_time, cpu)
 
-
-
-
-# In[5]:
-
-
 def read_scenario(filepath, num_nodes, num_path):
-    
     scenario_weights = np.zeros((num_nodes, num_nodes, num_path))
     
     with open(filepath, 'r') as f:
@@ -256,12 +210,7 @@ def read_scenario(filepath, num_nodes, num_path):
     
     return scenario_weights
 
-
-# In[6]:
-
-
-def calculate_deltas(scenario_weights):
-    
+def calculate_deltas(scenario_weights):   
     deltas = np.zeros_like(scenario_weights)
     for i in range(num_nodes):
         for j in range(num_nodes):
@@ -271,29 +220,18 @@ def calculate_deltas(scenario_weights):
     #deltas = np.min(deltas, axis=2)
     return deltas
 
-
-# In[7]:
-
-
 def solve_recourse(solution_x, deltas, num_nodes, num_path):
-    model = gp.Model("Second_Stage_Problem")
-
-    
+    model = gp.Model("Second_Stage_Problem") 
     y = model.addVars(num_nodes, num_nodes, num_path, vtype=GRB.BINARY, name="y")
-
-    
     model.setObjective(
         gp.quicksum(deltas[i, j, k] * y[i, j, k] 
                       for i in range(num_nodes) for j in range(num_nodes) for k in range(num_path)),
         sense=GRB.MINIMIZE
     )
-
-    
     model.addConstrs(
         (gp.quicksum(y[i, j, k] for k in range(num_path)) == solution_x[i][j] for i in range(num_nodes) for j in range(num_nodes)),
         name="select_path")
     
-  
     model.setParam('OutputFlag', 0)
     model.optimize()
 
@@ -301,23 +239,11 @@ def solve_recourse(solution_x, deltas, num_nodes, num_path):
         res = model.objVal
         return res 
 
-
-# In[8]:
-
-
 with open("test_set_scenarios.txt", "r") as f:
         valid_range = [int(line.strip()) for line in f]
 
-
-# In[9]:
-
-
 def eval_first(first_stage_solution, edge_weights, num_nodes):
     return sum(edge_weights[i,j] * first_stage_solution[i][j] for i in range (num_nodes) for j in range(num_nodes))
-
-
-# In[10]:
-
 
 def eval_second(first_stage_solution, num_nodes, num_path):
     second = 0
@@ -329,27 +255,15 @@ def eval_second(first_stage_solution, num_nodes, num_path):
         second += solve_recourse(first_stage_solution, deltas, num_nodes, num_path)
     return second/500       
 
-
-# In[11]:
-
-
 def sequence_to_adjacency_matrix(sequence):
     n = max(sequence)
-    
     adjacency_matrix = np.zeros((n, n), dtype=int)
-    
+  
     for i in range(len(sequence) - 1):
         adjacency_matrix[sequence[i] - 1][sequence[i + 1] - 1] = 1
     
     adjacency_matrix[sequence[-1] - 1][sequence[0] - 1] = 1
-    
     return adjacency_matrix
-
-
-
-
-# In[12]:
-
 
 def solve_mpTSP_with_nn(edge_weights, num_nodes, num_path, model_nn):
     model = gp.Model("mpTSP_with_NN")
@@ -375,7 +289,6 @@ def solve_mpTSP_with_nn(edge_weights, num_nodes, num_path, model_nn):
     
     model.addConstrs(x[i, i] == 0 for i in range(num_nodes))
     
-    
     model.addConstrs(
         gp.quicksum(phi[i, j] for i in range(num_nodes) if i != j) -
         gp.quicksum(phi[j, m] for m in range(num_nodes) if m != j) == 1
@@ -392,7 +305,6 @@ def solve_mpTSP_with_nn(edge_weights, num_nodes, num_path, model_nn):
         phi[i, j] <= num_nodes * x[i, j] for i in range(num_nodes) for j in range(num_nodes)
     )
 
- 
     for i in range(num_nodes):
         for j in range(num_nodes):
             if i != j:  
@@ -401,11 +313,8 @@ def solve_mpTSP_with_nn(edge_weights, num_nodes, num_path, model_nn):
                 else:
                     k = i * (num_nodes - 1) + j
                 model.addConstr(x[i, j] == binary_sequence[k])
-          
-                
-                
+                    
     pred_constr = add_predictor_constr(model, model_nn, binary_sequence, cost_surrogate)
-    
     
     solver_options = {
     "TimeLimit": 18000, 
@@ -415,12 +324,9 @@ def solve_mpTSP_with_nn(edge_weights, num_nodes, num_path, model_nn):
     #"LogFile": f"solver_log_{s}_{n}.txt"  
     }
 
-
     for param, value in solver_options.items():
         model.setParam(param, value)
-    
-    
-    
+     
     start_time = time.time()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF).ru_utime
     model.optimize()
@@ -452,18 +358,9 @@ def solve_mpTSP_with_nn(edge_weights, num_nodes, num_path, model_nn):
         for k in range(num_nodes * (num_nodes - 1)):
             BinarySequence[k] = binary_sequence[k].x 
             
-            
     solution = sequence_to_adjacency_matrix(route)
     first_stage_cost = eval_first(solution, edge_weights, num_nodes)
     second_stage_cost = eval_second(solution, num_nodes, num_path)
     total_cost = first_stage_cost + second_stage_cost
 
     return route, res, total_cost, resolution_time, cpu
-
-
-
-
-
-
-
-
