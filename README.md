@@ -17,6 +17,7 @@ Install the following Python packages before running the code:
 - pip install gurobi-machinelearning
 - pip install pyomo
 - pip install mpi-sppy
+- pip install tensorflow
 
 Training data can be generated using recourse.py.
 The main implementation is in surrogate.py.
